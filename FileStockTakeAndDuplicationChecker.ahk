@@ -21,8 +21,8 @@ exclusionExtArray := StrSplit(exclusionExt, "|")
 exclusionDir = $RECYCLE.BIN|$RECYCLE.BIM
 exclusionDirArray := StrSplit(exclusionDir, "|")
 
-testlimit = 100
-anum = 0
+testlimit = null
+anum = 1000
 
 main:
 ;declare a main body
@@ -129,7 +129,30 @@ cleanVar:
 	ifinstring , varToClean , "		;"
 	{
 		msgbox ,,, file found with talking marks - %a_loopfilefullpath%
-		stringreplace , cleanVarOut , varToClean , " , ' , A		;"
+		stringreplace , cleanVarOut , varToClean , " , - , A		;"
+		stringleft , cleanedVarType , varToClean , 2
+		ifequal , cleanedVarType , FN
+		{
+			FNVarClean = Y
+		}
+		ifequal , cleanedVarType , DR
+		{
+			DRVarClean = Y
+		}
+		ifequal , cleanedVarType , EX
+		{
+			EXVarClean = Y
+		}
+	}
+	else
+	{
+		stringtrimleft , cleanVarOut , varToClean , 8
+	}
+	
+	ifinstring , varToClean , '
+	{
+		msgbox ,,, file found with single talking mark - %a_loopfilefullpath%
+		stringreplace , cleanVarOut , varToClean , ' , - , A		;"
 		stringleft , cleanedVarType , varToClean , 2
 		ifequal , cleanedVarType , FN
 		{
