@@ -8,14 +8,20 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 ;Version	Date		Author		Notes
 ;	0.1		14-MAR-2017	Staid03		Initial
-;	0.2		20-MAR-2017	Staid03		Updated for MD5Checksum plus modified JSONfile to be a selected file rather
-;									than entering the filename in every time
+;	0.2		20-MAR-2017	Staid03		Updated for MD5Checksum plus modified JSONfile 
+;									to be a selected file rather than entering the
+;									filename in every time
+;	0.3		09-APR-2017 Staid03		Added computer name and user name to SQL output
+;									file for tracking purposes.
+;
 
 main:
 {
 	;variables - declare and get (in case of retrieving filename)
 	formattime , atime ,, yyyyMMdd_HHmmss
-	SQLinsertfile = SQLinsertfile_%atime%.sql
+	EnvGet , computerName , COMPUTERNAME
+	EnvGet , userName , USERNAME
+	SQLinsertfile = SQLinsertfile_%computerName%__%userName%_%atime%.sql
 	SQLProgram = "C:\Program Files (x86)\Notepad++\notepad++.exe"
 
 	FileSelectFile , JSONfile , , %A_ScriptDir% ,, *.json
