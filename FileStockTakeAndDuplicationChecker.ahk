@@ -15,6 +15,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 ;	0.5		08-APR-2017	Staid03		Updated mechanism for md5checksum retrieval to use powershell and not fciv.exe. Note that md5checksum
 ;									retrieval is purely for determining file duplication and not for file security.
 ;	0.6		09-APR-2017	Staid03		Updated script for logging details of start/stop times, number of files, and cleaned variables
+;	0.7		09-APR-2017	Staid03		If file is over specified size limit, then do not retrieve MD5checksum
 
 formattime , atime ,, yyyyMMdd_HHmmss
 
@@ -23,6 +24,7 @@ givenNameForTheDrive = laptop_d
 outputFile = FileStockTake_%givenNameForTheDrive%_%atime%.json
 jsonProgram = "C:\Program Files (x86)\Notepad++\notepad++.exe"
 checksumoutfile = ~checksumoutfile.xml
+MD5checksumExclusionSizeBytes = 500000000		;500mb
 exclusionExt = xls|doc|png		;just examples
 exclusionExtArray := StrSplit(exclusionExt, "|")
 ;exclusionDir = $RECYCLE.BIN|system|System32|Program Files|DIAD|eSupport|Logs|NVIDIA|PerfLogs|Users|Windows|Boot|ProgramData
@@ -94,7 +96,17 @@ main:
 				oExt = %cleanVarOut%
 			}		
 		}	
-		gosub , generateMD5Checksum	
+		
+		;getting the script to ignore MD5checksums that are over a specified size limit
+		ifless , oSize , %MD5checksumExclusionSizeBytes%
+		{
+			gosub , generateMD5Checksum	
+		}
+		else
+		{
+			MD5checksum = too_large
+		}
+		
 		gosub , createJSON
 		ifequal , anum , %testlimit%				;break the loop upon reaching testlimit variable loop times
 		{
