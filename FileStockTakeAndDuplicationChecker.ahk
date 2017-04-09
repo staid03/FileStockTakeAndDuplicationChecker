@@ -8,6 +8,13 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 ;Version	Date		Author		Notes
 ;	0.1		14-MAR-2017	Staid03		Initial
+;	0.2		15-MAR-2017	Staid03		Updating for C drive. Fixed an issue with Y flags not cleaning up the FileLocation.
+;	0.3		19-MAR-2017	Staid03		Added MD5checksum retrieval and addition to JSON file
+;	0.4		19-MAR-2017	Staid03		Fixing output so it allows talking marks in the JSON file (searching for escape chars for JSON) " '
+;									Escape char = \  eg. \"		\'
+;	0.5		08-APR-2017	Staid03		Updated mechanism for md5checksum retrieval to use powershell and not fciv.exe. Note that md5checksum
+;									retrieval is purely for determining file duplication and not for file security.
+;	0.6		09-APR-2017	Staid03		Updated script for logging details of start/stop times, number of files, and cleaned variables
 
 formattime , atime ,, yyyyMMdd_HHmmss
 
@@ -15,31 +22,38 @@ infolder = d:\
 givenNameForTheDrive = laptop_d
 outputFile = FileStockTake_%givenNameForTheDrive%_%atime%.json
 jsonProgram = "C:\Program Files (x86)\Notepad++\notepad++.exe"
-
+checksumoutfile = ~checksumoutfile.xml
 exclusionExt = xls|doc|png		;just examples
 exclusionExtArray := StrSplit(exclusionExt, "|")
-exclusionDir = $RECYCLE.BIN|$RECYCLE.BIM
+;exclusionDir = $RECYCLE.BIN|system|System32|Program Files|DIAD|eSupport|Logs|NVIDIA|PerfLogs|Users|Windows|Boot|ProgramData
+exclusionDir = $RECYCLE.BIN
 exclusionDirArray := StrSplit(exclusionDir, "|")
+cleanedVarsFNNum = 0
+cleanedVarsDRNum = 0
+cleanedVarsEXNum = 0
+scriptRunLog = Script_Run_Details.log
 
-testlimit = null
-anum = 1000
+testlimit = null		;update this to a number if you only want to test to
+						;a certain number of files
+anum = 1
 
 main:
 ;declare a main body
 {
 	FormatTime , nTimeStamp , , yyyyMMddHHmm
+	starttime = %nTimeStamp%
 	;begin looping through each file from the specified source folder
 	oDirCheck = 
-	gosub , beginJSONFile					;create the JSON file and the first few lines
-	loop , %infolder%*.* , 0 , 1
+	GoSub , beginJSONFile					;create the JSON file and the first few lines
+	Loop , %infolder%*.* , 0 , 1
 	{
 		;search through the specified folder for files to collect metadata on		
-		gosub , resetVars					;reset the variables
+		GoSub , resetVars					;reset the variables
 		SplitPath , a_loopfilefullpath , oFileName , oDir , oExt , oNameNoExt , oDrive
-		gosub , excludedFileCheck			;check if this file/folder has been excluded from being recorded
-		ifequal , excluded , y				;if it has been returned to exclude this file/folder, then move onto the next file
+		GoSub , excludedFileCheck			;check if this file/folder has been excluded from being recorded
+		IfEqual , excluded , y				;if it has been returned to exclude this file/folder, then move onto the next file
 		{
-			continue
+			Continue
 		}
 		ifnotequal , oDirCheck , %oDir%
 		{
@@ -57,7 +71,6 @@ main:
 			}
 			else 
 			{
-
 				gosub , newfileLocationJSON
 			}
 		}
@@ -81,17 +94,20 @@ main:
 				oExt = %cleanVarOut%
 			}		
 		}	
+		gosub , generateMD5Checksum	
 		gosub , createJSON
-		ifequal , anum , %testlimit%		;break the loop upon reaching testlimit variable loop times
+		ifequal , anum , %testlimit%				;break the loop upon reaching testlimit variable loop times
 		{
 			break
 		}
 		anum++
 	}
 	gosub , endJSONFile
+	gosub , outputLogDetails
 	run , %jsonProgram% %outputFile%
+	msgbox ,,, script %a_scriptname% completed - %anum% number of rows
 }
-return
+Return
 
 resetVars:
 ;reset the variables for the next iteration of the loop
@@ -104,7 +120,7 @@ resetVars:
 	oCreatedTimeRaw = 
 	excluded = n
 }
-return
+Return
 
 excludedFileCheck:
 ;check for any excluded file types
@@ -119,7 +135,7 @@ excludedFileCheck:
 		}
 	}	
 }
-return 
+Return 
 
 cleanVar:
 ;runs through the vars that could have talking marks in them to remove the talking marks for JSON file
@@ -128,58 +144,39 @@ cleanVar:
 	cleanVarOut = 
 	ifinstring , varToClean , "		;"
 	{
-		msgbox ,,, file found with talking marks - %a_loopfilefullpath%
-		stringreplace , cleanVarOut , varToClean , " , - , A		;"
+		stringreplace , cleanVarOut , varToClean , " , \" , A
 		stringleft , cleanedVarType , varToClean , 2
 		ifequal , cleanedVarType , FN
 		{
 			FNVarClean = Y
+			cleanedVarsFNNum++
 		}
 		ifequal , cleanedVarType , DR
 		{
 			DRVarClean = Y
+			cleanedVarsDRNum++
 		}
 		ifequal , cleanedVarType , EX
 		{
 			EXVarClean = Y
+			cleanedVarsEXNum++
 		}
-	}
-	else
-	{
-		stringtrimleft , cleanVarOut , varToClean , 8
-	}
-	
-	ifinstring , varToClean , '
-	{
-		msgbox ,,, file found with single talking mark - %a_loopfilefullpath%
-		stringreplace , cleanVarOut , varToClean , ' , - , A		;"
-		stringleft , cleanedVarType , varToClean , 2
-		ifequal , cleanedVarType , FN
-		{
-			FNVarClean = Y
-		}
-		ifequal , cleanedVarType , DR
-		{
-			DRVarClean = Y
-		}
-		ifequal , cleanedVarType , EX
-		{
-			EXVarClean = Y
-		}
-	}
-	else
-	{
-		stringtrimleft , cleanVarOut , varToClean , 8
-	}
+	}	
+	stringtrimleft , cleanVarOut , varToClean , 8
 }
-return 
-; {
-     ; "firstName": "John",
-     ; "lastName": "Smith",
-     ; "age": 25,
-	 
-	 ;want to keep: oNameNoExt oExt oDir
-	 ;msgbox ,,, %oCreatedTimeRaw%`n`n%oModifiedTimeRaw%
+Return 
+
+generateMD5Checksum:
+{
+	filedelete , %checksumoutfile%
+	MD5checksum = 		;reset in case it fails
+	md5line = 			;reset in case it fails
+	runwait , powershell.exe Get-FileHash '%a_loopfilefullpath%' -Algorithm MD5 | Format-List > %checksumoutfile% , , min
+	sleep , 300
+	filereadline , md5line , %checksumoutfile% , 4
+	stringtrimleft , MD5checksum , md5line , 12
+}
+Return
 
 beginJSONFile:
 {
@@ -190,13 +187,14 @@ beginJSONFile:
 	
 	fileappend , %outputline% , %outputFile%
 }
-return 
+Return 
 
 fileLocationJSON:
 {
 	outputline = `n
 	outputline = %outputline%	}`n
 	outputline = %outputline%	"FileLocationDetails": `n	{
+	
 	fileappend , %outputline% , %outputFile%
 }
 
@@ -208,12 +206,11 @@ newfileLocationJSON:
 	
 	fileappend , %outputline% , %outputFile%
 }
-return
+Return
 
 createJSON:
 ;create the JSON file
 {
-	;outputline = 	{`n
 	outputline = `n
 	outputline = %outputline%		"FileDetails": `n		{`n
 	outputline = %outputline%			"FileName": "%oFileName%"`n
@@ -221,13 +218,14 @@ createJSON:
 	outputline = %outputline%			"FileExt": "%oExt%"`n
 	outputline = %outputline%			"FileExtCleanRequired": "%EXVarClean%"`n
 	outputline = %outputline%			"FileSizeBytes": "%oSize%"`n
+	outputline = %outputline%			"MD5checksum": "%MD5checksum%"`n
 	outputline = %outputline%			"FileTimeModified": "%oModifiedTimeRaw%"`n
 	outputline = %outputline%			"FileTimeCreated": "%oCreatedTimeRaw%"`n
 	outputline = %outputline%		}
 	
 	fileappend , %outputline% , %outputFile%
 }
-return 
+Return 
 
 endJSONFile:
 {
@@ -236,4 +234,12 @@ endJSONFile:
 	
 	fileappend , %outputline% , %outputFile%
 }
-return 
+Return 
+
+outputLogDetails:
+{
+	FormatTime , endtime , , yyyyMMddHHmm
+	thisScriptRunLogDetails = %starttime%,%endtime%,%anum%,%cleanedVarsFNNum%,%cleanedVarsDRNum%,%cleanedVarsEXNum%
+	fileappend , %thisScriptRunLogDetails%`n, %scriptRunLog%
+}
+Return 
