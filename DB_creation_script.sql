@@ -1,15 +1,16 @@
---create database for File Stocktake
---create database if not exists 'File_Stocktake';
+--Create database for File Stocktake
+--Create database if not exists 'File_Stocktake';
 -- USE 'File_Stocktake';
 --
 -- Version	Date		Author 			Notes
---	0.1		14-MAR-2017	Staid03			initial
---	0.2		20-MAR-2017	Staid03			adding md5Checksum field
+--	0.1		14-MAR-2017	Staid03			Initial
+--	0.2		20-MAR-2017	Staid03			Adding md5Checksum field
+--  0.3		09-APR-2017	Staid03			Adding field to flag a file OK
 
 
 
 
-DROP TABLE 'Files';
+DROP TABLE IF EXISTS 'Files';
 
 CREATE TABLE IF NOT EXISTS 'Files' (
 	-- 'ID' int(8) NOT NULL,
@@ -24,5 +25,6 @@ CREATE TABLE IF NOT EXISTS 'Files' (
 	'FileSizeBytes' int(8) DEFAULT NULL,
 	'MD5Checksum' varchar(32) DEFAULT NULL,
 	'FileTimeModified' int(8) DEFAULT NULL,
-	'FileTimeCreated' int(8) DEFAULT NULL	
+	'FileTimeCreated' int(8) DEFAULT NULL,
+	'FlaggedOK' int(1) DEFAULT NULL
 );
