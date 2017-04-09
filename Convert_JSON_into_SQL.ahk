@@ -8,54 +8,34 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 ;Version	Date		Author		Notes
 ;	0.1		14-MAR-2017	Staid03		Initial
+;	0.2		20-MAR-2017	Staid03		Updated for MD5Checksum plus modified JSONfile to be a selected file rather
+;									than entering the filename in every time
 
-formattime , atime ,, yyyyMMdd_HHmmss
-
-; {
-	; "ScriptTimeStamp": "201703140253"
-	; "DriveName": "laptop_d"
-	; "FileLocationDetails": 
-	; {
-		; "FileLocation": "d:"
-		; "FileLocationCleanRequired": "N"
-		; "FileDetails": 
-		; {
-			; "FileName": "avira_vpn_option.png"
-			; "FileNameCleanRequired": "N"
-			; "FileExt": "png"
-			; "FileExtCleanRequired": "N"
-			; "FileSizeBytes": "25112"
-			; "FileTimeModified": "20160426131303"
-			; "FileTimeCreated": "20160426131303"
-		; }
-		; "FileDetails": 
-		; {
-			; "FileName": "Contacts.vcf"
-			; "FileNameCleanRequired": "N"
-			; "FileExt": "vcf"
-			; "FileExtCleanRequired": "N"
-			; "FileSizeBytes": "300332"
-			; "FileTimeModified": "20170302065002"
-			; "FileTimeCreated": "20170303215150"
-		; }
-
-
-
-JSONfile = FileStockTake_laptop_d_20170314_041817.json
-SQLinsertfile = SQLinsertfile_%atime%.sql
-SQLProgram = "C:\Program Files (x86)\Notepad++\notepad++.exe"
-
-
-loop , read , %JSONfile%
+main:
 {
-	gosub , processline
-	ifequal , writeSQLline , y
+	;variables - declare and get (in case of retrieving filename)
+	formattime , atime ,, yyyyMMdd_HHmmss
+	SQLinsertfile = SQLinsertfile_%atime%.sql
+	SQLProgram = "C:\Program Files (x86)\Notepad++\notepad++.exe"
+
+	FileSelectFile , JSONfile , , %A_ScriptDir% ,, *.json
+	if errorlevel
 	{
-		gosub , writeSQL
-		writeSQLline = n
+	 msgbox ,,, no file was chosen
+	 exit
 	}
+
+	loop , read , %JSONfile%
+	{
+		gosub , processline
+		ifequal , writeSQLline , y
+		{
+			gosub , writeSQL
+			writeSQLline = n
+		}
+	}
+	run , %SQLProgram% %SQLinsertfile%
 }
-run , %SQLProgram% %SQLinsertfile%
 return
 
 processline:
@@ -74,7 +54,6 @@ processline:
 		
 		ifequal , thisVarType , ScriptTimeStamp
 		{
-			;msgbox ,,, timestamp is %ScriptTimeStamp%
 			ScriptTimeStamp = %thisVar%
 		}
 		
@@ -85,7 +64,8 @@ processline:
 		
 		ifequal , thisVarType , FileLocation
 		{
-			FileLocation = %thisVar%
+			gosub , cleanUpTalkingMark
+			FileLocation = %thisVar%			
 		}
 		
 		ifequal , thisVarType , FileLocationCleanRequired
@@ -95,6 +75,7 @@ processline:
 		
 		ifequal , thisVarType , FileName
 		{
+			gosub , cleanUpTalkingMark
 			FileName = %thisVar%
 		}
 		
@@ -105,6 +86,7 @@ processline:
 		
 		ifequal , thisVarType , FileExt
 		{
+			gosub , cleanUpTalkingMark
 			FileExt = %thisVar%
 		}
 		
@@ -116,6 +98,11 @@ processline:
 		ifequal , thisVarType , FileSizeBytes
 		{
 			FileSizeBytes = %thisVar%
+		}
+		
+		ifequal , thisVarType , MD5Checksum
+		{
+			MD5Checksum = %thisVar%
 		}
 		
 		ifequal , thisVarType , FileTimeModified
@@ -131,26 +118,21 @@ processline:
 }
 return
 
-; CREATE TABLE IF NOT EXISTS 'Files' (
-	; 'ScriptTimeStamp' int(8) DEFAULT NULL,
-	; 'DriveName' varchar(20) DEFAULT NULL,
-	; 'FileLocation' varchar(100) DEFAULT NULL,
-	; 'FileLocationCleanRequired' int(1) DEFAULT NULL,
-	; 'FileName' varchar(100) DEFAULT NULL,
-	; 'FileNameCleanRequired' int(1) DEFAULT NULL,
-	; 'FileExt' varchar(10) DEFAULT NULL,
-	; 'FileExtCleanRequired' int(1) DEFAULT NULL,
-	; 'FileSizeBytes' int(8) DEFAULT NULL,
-	; 'FileTimeModified' int(8) DEFAULT NULL,
-	; 'FileTimeCreated' int(8) DEFAULT NULL	
-; );
+cleanUpTalkingMark:
+{
+	ifinstring , thisVar , '
+	{
+		StringReplace , thisVar , thisVar , ' , '' , A
+	}
+}
+Return
 
 writeSQL:
 {
 	outSQLvalues = '%ScriptTimeStamp%','%DriveName%','%FileLocation%','%FileLocationCleanRequired%','%FileName%','%FileNameCleanRequired%'
-	outSQLvalues = %outSQLvalues%,'%FileExt%','%FileExtCleanRequired%','%FileSizeBytes%','%FileTimeModified%','%FileTimeCreated%'
+	outSQLvalues = %outSQLvalues%,'%FileExt%','%FileExtCleanRequired%','%FileSizeBytes%','%MD5Checksum%','%FileTimeModified%','%FileTimeCreated%'
 	outSQLline = INSERT into 'Files' ('ScriptTimeStamp','DriveName','FileLocation','FileLocationCleanRequired','FileName','FileNameCleanRequired'
-	outSQLline = %outSQLline%,'FileExt','FileExtCleanRequired','FileSizeBytes','FileTimeModified','FileTimeCreated') Values(%outSQLvalues%)
+	outSQLline = %outSQLline%,'FileExt','FileExtCleanRequired','FileSizeBytes','MD5Checksum','FileTimeModified','FileTimeCreated') Values(%outSQLvalues%)
 	fileappend , %outSQLline%`;`n , %SQLinsertfile%
 }
 return 
