@@ -13,6 +13,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 ;									filename in every time
 ;	0.3		09-APR-2017 Staid03		Added computer name and user name to SQL output
 ;									file for tracking purposes.
+;	0.4		30-MAY-2017	Staid03		Removing MD5 functionality for speed purposes
 ;
 
 main:
@@ -105,21 +106,6 @@ processline:
 		{
 			FileSizeBytes = %thisVar%
 		}
-		
-		ifequal , thisVarType , MD5Checksum
-		{
-			MD5Checksum = %thisVar%
-		}
-		
-		ifequal , thisVarType , FileTimeModified
-		{
-			FileTimeModified = %thisVar%
-		}
-
-		ifequal , thisVarType , FileTimeCreated
-		{
-			FileTimeCreated = %thisVar%
-		}
 	}
 }
 return
@@ -136,9 +122,9 @@ Return
 writeSQL:
 {
 	outSQLvalues = '%ScriptTimeStamp%','%DriveName%','%FileLocation%','%FileLocationCleanRequired%','%FileName%','%FileNameCleanRequired%'
-	outSQLvalues = %outSQLvalues%,'%FileExt%','%FileExtCleanRequired%','%FileSizeBytes%','%MD5Checksum%','%FileTimeModified%','%FileTimeCreated%'
+	outSQLvalues = %outSQLvalues%,'%FileExt%','%FileExtCleanRequired%','%FileSizeBytes%'
 	outSQLline = INSERT into 'Files' ('ScriptTimeStamp','DriveName','FileLocation','FileLocationCleanRequired','FileName','FileNameCleanRequired'
-	outSQLline = %outSQLline%,'FileExt','FileExtCleanRequired','FileSizeBytes','MD5Checksum','FileTimeModified','FileTimeCreated') Values(%outSQLvalues%)
-	fileappend , %outSQLline%`;`n , %SQLinsertfile%
+	outSQLline = %outSQLline%,'FileExt','FileExtCleanRequired','FileSizeBytes') Values(%outSQLvalues%)
+	fileappend , %outSQLline%`
 }
 return 

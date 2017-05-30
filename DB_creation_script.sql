@@ -23,8 +23,5 @@ CREATE TABLE IF NOT EXISTS 'Files' (
 	'FileExt' varchar(10) DEFAULT NULL,
 	'FileExtCleanRequired' int(1) DEFAULT NULL,
 	'FileSizeBytes' int(8) DEFAULT NULL,
-	'MD5Checksum' varchar(32) DEFAULT NULL,
-	'FileTimeModified' int(8) DEFAULT NULL,
-	'FileTimeCreated' int(8) DEFAULT NULL,
 	'FlaggedOK' int(1) DEFAULT NULL
 );
